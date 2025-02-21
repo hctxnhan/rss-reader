@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    --background: 230 25% 10%;
+    --foreground: 180 100% 85%;
+    
+    --terminal-green: 160 100% 50%;
+    --terminal-cursor: 160 100% 75%;
+    
+    --primary: 180 100% 50%;
+    --primary-foreground: 230 25% 10%;
+    
+    --secondary: 280 70% 50%;
+    --secondary-foreground: 180 100% 85%;
+    
+    --muted: 230 30% 20%;
+    --muted-foreground: 180 100% 70%;
+    
+    --accent: 320 70% 50%;
+    --accent-foreground: 230 25% 10%;
+    
+    --border: 180 50% 30%;
+    --input: 230 50% 20%;
+    --ring: 180 100% 50%;
+  }
+
+  * {
+    @apply border-border font-mono;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Terminal Window */
+  .terminal-window {
+    @apply border border-terminal-green bg-background/50 backdrop-blur-sm;
+  }
+
+  .terminal-header {
+    @apply border-b border-terminal-green px-4 py-2 flex items-center justify-between;
+  }
+
+  .terminal-content {
+    @apply p-4 space-y-2;
+  }
+
+  /* Terminal Text */
+  .terminal-prompt::before {
+    content: "$ ";
+    @apply text-terminal-green;
+  }
+
+  .terminal-cursor::after {
+    content: "█";
+    @apply text-terminal-cursor animate-blink;
+  }
+
+  /* Terminal Lists */
+  .terminal-list {
+    @apply space-y-1;
+  }
+
+  .terminal-list-item {
+    @apply flex gap-2;
+  }
+
+  .terminal-list-item::before {
+    content: ">";
+    @apply text-terminal-green;
+  }
+}
+
+/* Content Container */
+.content-container {
+  @apply w-full max-w-[720px] mx-auto px-0 md:px-4;
+}
+
+/* Article Typography */
+.prose {
+  @apply max-w-none;
+}
+
+.prose p {
+  @apply mb-4 leading-relaxed text-muted-foreground;
+}
+
+.prose img {
+  @apply shadow-lg my-10 w-full;
+}
+
+.prose h2 {
+  @apply text-terminal-green font-bold mb-4 mt-8 text-2xl;
+}
+
+.prose h3 {
+  @apply text-terminal-green/90 font-bold mb-3 mt-6 text-xl;
+}
+
+.prose blockquote {
+  @apply border-l-2 border-terminal-green pl-4 my-4 italic text-muted-foreground bg-muted/50 py-2;
+}
+
+.prose ul {
+  @apply space-y-2 my-4;
+}
+
+.prose ul > li {
+  @apply flex gap-3 items-start pl-6 relative;
+}
+
+.prose ul > li::before {
+  content: ">";
+  @apply absolute left-0 text-terminal-green;
+}
+
+.prose ol {
+  @apply space-y-2 my-4 list-none;
+  counter-reset: item;
+}
+
+.prose ol > li {
+  @apply flex gap-3 items-start pl-6 relative;
+  counter-increment: item;
+}
+
+.prose ol > li::before {
+  content: counter(item) ">";
+  @apply absolute left-0 text-terminal-green;
+}
+
+.prose li > * {
+  @apply text-muted-foreground;
+}
+
+.prose pre {
+  @apply bg-muted p-4 my-4 overflow-x-auto;
+}
+
+.prose code {
+  @apply font-mono text-sm bg-muted px-1.5 py-0.5;
+}
