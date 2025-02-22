@@ -8,6 +8,7 @@ import { fetchRssFeed } from "@/lib/rss-utils";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { defaultPrompt as utilDefaultPrompt } from "@/lib/utils";
+import { fetchYoutubeChannel, isYoutubeUrl } from "@/lib/youtube-utils";
 export default function Settings() {
   const [feeds, setFeeds] = useState([]);
   const [newFeedUrl, setNewFeedUrl] = useState("");
@@ -63,6 +64,37 @@ export default function Settings() {
     setAiModel(model);
     localStorage.setItem("aiModel", model);
   };
+
+  const addFeed = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      let feed;
+      if (isYoutubeUrl(newFeedUrl)) {
+        feed = await fetchYoutubeChannel(newFeedUrl);
+      } else {
+        feed = await fetchRssFeed(newFeedUrl);
+      }
+      if (feed) {
+        setFeeds([
+          ...feeds,
+          {
+            title: feed.title,
+            url: feed.url,
+            description: feed.description,
+            type: isYoutubeUrl(newFeedUrl) ? "youtube" : "rss",
+          },
+        ]);
+        localStorage.setItem("rssFeeds", JSON.stringify([...feeds, feed]));
+      }
+    } catch (error) {
+      console.error("Failed to add feed:", error);
+    } finally {
+      setLoading(false);
+      setNewFeedUrl("");
+    }
+  };
+
   return (
     <main className="min-h-screen pt-20 bg-background">
       <Navigation />
@@ -84,7 +116,7 @@ export default function Settings() {
                   : "text-primary/60 hover:text-primary hover:bg-primary/5"
               }`}
             >
-              [RSS Feeds]
+              [Feeds]
             </button>
             <button
               onClick={() => setActiveTab("ai")}
@@ -103,35 +135,13 @@ export default function Settings() {
               <div className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Enter RSS feed URL"
+                    placeholder="Enter RSS feed URL or YouTube channel URL"
                     value={newFeedUrl}
                     onChange={(e) => setNewFeedUrl(e.target.value)}
                     className="border-primary/30 bg-background/50 text-primary font-mono placeholder:text-primary/30 focus:border-primary transition-colors"
                   />
                   <Button
-                    onClick={async () => {
-                      if (!newFeedUrl) return;
-                      setLoading(true);
-                      try {
-                        const response = await fetchRssFeed(newFeedUrl);
-                        const newFeed = {
-                          url: newFeedUrl,
-                          title: response.feed.title || "Untitled Feed",
-                          description: response.feed.description || "",
-                        };
-                        const updatedFeeds = [...feeds, newFeed];
-                        setFeeds(updatedFeeds);
-                        localStorage.setItem(
-                          "rssFeeds",
-                          JSON.stringify(updatedFeeds)
-                        );
-                        setNewFeedUrl("");
-                      } catch (error) {
-                        console.error("Failed to add feed:", error);
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
+                    onClick={addFeed}
                     disabled={loading}
                     className="text-primary bg-transparent hover:bg-primary/10 transition-all font-mono"
                   >
@@ -145,9 +155,14 @@ export default function Settings() {
                       key={index}
                       className="flex items-center justify-between group p-2 rounded hover:bg-primary/5 transition-colors"
                     >
-                      <span className="text-primary/80 font-mono truncate">
-                        {feed.title || feed.url}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary/60 font-mono text-sm">
+                          [{feed.type || "rss"}]
+                        </span>
+                        <span className="text-primary/80 font-mono truncate">
+                          {feed.title || feed.url}
+                        </span>
+                      </div>
                       <Button
                         variant="ghost"
                         onClick={() => {
@@ -196,7 +211,10 @@ export default function Settings() {
                       variant="ghost"
                       onClick={() => {
                         setDefaultPrompt(utilDefaultPrompt);
-                        localStorage.setItem("defaultPrompt", utilDefaultPrompt);
+                        localStorage.setItem(
+                          "defaultPrompt",
+                          utilDefaultPrompt
+                        );
                       }}
                       className="text-primary/60 hover:text-primary hover:bg-primary/10 font-mono text-sm"
                     >

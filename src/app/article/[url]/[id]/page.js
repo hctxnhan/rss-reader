@@ -22,6 +22,11 @@ import {
 import { marked } from "marked";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
+import {
+  fetchVideoTranscript,
+  fetchYoutubeChannel,
+  isYoutubeUrl,
+} from "@/lib/youtube-utils";
 
 const fontFamilies = [
   { name: "JetBrains Mono", value: "font-jetbrains" },
@@ -61,19 +66,54 @@ export default function ArticlePage({ params }) {
   async function loadArticle() {
     try {
       setLoading(true);
-      const data = await fetchRssFeed(decodedUrl);
-      setArticle(data.items[articleId]);
+      let data;
+      if (!isYoutubeUrl(decodedUrl)) {
+        data = await fetchRssFeed(decodedUrl);
+      } else {
+        data = await fetchYoutubeChannel(decodedUrl);
+      }
+
+      const item = data.items[articleId];
+
+      // If it's a YouTube video, fetch the transcript
+      if (item.isVideo && item.videoId) {
+        const transcriptData = await fetchVideoTranscript(item.videoId);
+        item.content = `
+          <div class="w-full h-[400px]">
+            <iframe
+              src="https://www.youtube.com/embed/${item.videoId}"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              class="rounded-lg shadow-lg w-full h-full"
+            ></iframe>
+          </div>
+          <div class="transcript">
+            ${transcriptData.content}
+          </div>
+        `;
+      }
+
+      setArticle(item);
     } catch (err) {
+      console.log(err);
       setError("Failed to load article");
     } finally {
       setLoading(false);
     }
   }
 
-  const defaultPrompt =
-    localStorage.getItem("defaultPrompt") || utilDefaultPrompt;
-  const openRouterKey = localStorage.getItem("openRouterKey");
-  const aiModel = localStorage.getItem("aiModel") || "gpt-3.5-turbo";
+  const [defaultPrompt, setDefaultPrompt] = useState(utilDefaultPrompt);
+  const [openRouterKey, setOpenRouterKey] = useState("");
+  const [aiModel, setAiModel] = useState("gpt-3.5-turbo");
+
+  useEffect(() => {
+    setDefaultPrompt(
+      localStorage.getItem("defaultPrompt") || utilDefaultPrompt
+    );
+    setOpenRouterKey(localStorage.getItem("openRouterKey"));
+    setAiModel(localStorage.getItem("aiModel") || "gpt-3.5-turbo");
+  }, []);
 
   async function summarizeArticle() {
     if (!openRouterKey) {
@@ -116,56 +156,65 @@ export default function ArticlePage({ params }) {
       setSummarizing(false);
     }
   }
+
   const formatContent = (content) => {
     return content
-      .replace(
+      .replaceAll(
         /<h2/g,
         `<h2 class="text-2xl font-bold mt-12 mb-6 text-primary ${fontFamily} tracking-wider"`
       )
-      .replace(
+      .replaceAll(
         /<h3/g,
         `<h3 class="text-xl font-bold mt-8 mb-4 text-primary/90 ${fontFamily} tracking-wide"`
       )
-      .replace(
+      .replaceAll(
         /<p>/g,
         `<p class="leading-relaxed mb-6 text-primary/70 ${fontFamily}">`
       )
-      .replace(
+      .replaceAll(
         /<blockquote>/g,
         '<blockquote class="border-l-4 border-primary pl-6 italic my-8 text-primary/60 bg-primary/5 p-4 rounded">'
       )
-      .replace(
+      .replaceAll(
         /<ul>/g,
-        '<ul class="space-y-3 my-6 border border-primary/20 rounded-lg p-4 bg-background/50">'
+        '<ul class="space-y-3 my-6 border border-primary/20 rounded-lg p-4 bg-background/50 list-disc pl-6">'
       )
-      .replace(
+      .replaceAll(
         /<ol>/g,
-        '<ol class="space-y-3 my-6 list-none counter-reset-item border border-primary/20 rounded-lg p-4 bg-background/50">'
+        '<ol class="space-y-3 my-6 list-decimal counter-reset-item border border-primary/20 rounded-lg p-4 bg-background/50 pl-6">'
       )
-      .replace(/<li>/g, `<li class="flex gap-3 items-start group">`)
-      .replace(/<\/li>/g, "</span></li>")
-      .replace(
+      .replaceAll(
+        /<li>/g,
+        `<li class="flex gap-3 items-start group"><span class="w-2 h-2 rounded-full bg-primary/70 mt-2"></span><span class="flex-1">`
+      )
+      .replaceAll(/<\/li>/g, "</span></li>")
+      .replaceAll(
         /<img/g,
-        '<img class="rounded-xl shadow-primary/30 my-10 w-full max-w-full h-auto border border-primary/30" loading="lazy"'
+        '<img class="rounded-xl shadow-primary/30 my-10 w-full max-w-full h-auto border border-primary/30 object-cover" loading="lazy"'
       )
-      .replace(
+      .replaceAll(
         /<pre/g,
-        `<pre class="bg-background/50 border border-primary/30 rounded-lg p-4 my-6 overflow-x-auto whitespace-pre-wrap break-words ${fontFamily} text-primary/70"`
+        `<pre class="bg-background/50 border border-primary/30 rounded-lg p-4 my-6 overflow-x-auto whitespace-pre-wrap break-words text-sm ${fontFamily} text-primary/70"`
       )
-      .replace(/<code/g, `<code class="${fontFamily} text-primary"`)
-      .replace(
+      .replaceAll(
+        /<code/g,
+        `<code class="px-1 py-0.5 bg-primary/10 rounded text-sm font-mono text-primary/80"`
+      )
+      .replaceAll(
         /<table/g,
-        `<div class="overflow-x-auto max-w-full my-6 border border-primary/30 rounded-lg bg-background/50"><table class="w-full border-collapse text-primary/70 ${fontFamily}"`
+        `<div class="overflow-x-auto max-w-full my-6 border border-primary/30 rounded-lg bg-background/50"><table class="w-full border-collapse text-primary/70 ${fontFamily} table-auto"`
       )
-      .replace(/<\/table>/g, "</table></div>")
-      .replace(
+      .replaceAll(/<\/table>/g, "</table></div>")
+      .replaceAll(
         /<th/g,
         `<th class="p-3 text-left border-b border-primary/30 font-medium text-primary bg-primary/10 ${fontFamily}"`
       )
-      .replace(
+      .replaceAll(
         /<td/g,
-        `<td class="p-3 border-b border-primary/10 ${fontFamily}"`
-      );
+        `<td class="p-3 border-b border-primary/10 text-primary/80 ${fontFamily}"`
+      )
+      .replaceAll(/<a /g, `<a class="text-primary hover:underline font-medium"`)
+      .replaceAll(/<hr>/g, `<hr class="my-6 border-primary/20">`);
   };
 
   return (
