@@ -4,27 +4,28 @@
  
 @layer base {
   :root {
-    --background: 230 25% 10%;
-    --foreground: 180 100% 85%;
-    
-    --terminal-green: 160 100% 50%;
-    --terminal-cursor: 160 100% 75%;
-    
-    --primary: 180 100% 50%;
-    --primary-foreground: 230 25% 10%;
-    
-    --secondary: 280 70% 50%;
-    --secondary-foreground: 180 100% 85%;
-    
-    --muted: 230 30% 20%;
-    --muted-foreground: 180 100% 70%;
-    
-    --accent: 320 70% 50%;
-    --accent-foreground: 230 25% 10%;
-    
-    --border: 180 50% 30%;
-    --input: 230 50% 20%;
-    --ring: 180 100% 50%;
+    /* One Dark Pro Theme Colors (Higher Contrast) */
+    --background: 220 20% 12%; /* Darker background (#21252B approx.) */
+    --foreground: 220 15% 78%; /* Lighter foreground (#C8CDD8 approx.) */
+
+    --terminal-green: 100 35% 60%; /* Same as before (#98C379) */
+    --terminal-cursor: 100 35% 70%;
+
+    --primary: 207 82% 66%; /* Blue (#61AFEF) */
+    --primary-foreground: 220 20% 12%;
+
+    --secondary: 286 60% 67%; /* Purple (#C678DD) */
+    --secondary-foreground: 220 15% 78%;
+
+    --muted: 210 20% 24%; /* Darker muted tone */
+    --muted-foreground: 220 10% 60%; /* Slightly lighter muted text */
+
+    --accent: 6 85% 67%; /* Red (#E06C75) */
+    --accent-foreground: 220 20% 12%;
+
+    --border: 220 15% 28%;
+    --input: 220 15% 22%;
+    --ring: 207 82% 66%;
   }
 
   * {
@@ -78,7 +79,6 @@
 .content-container {
   @apply w-full max-w-[720px] mx-auto px-0 md:px-4;
 }
-
 /* Article Typography */
 .prose {
   @apply max-w-none;
@@ -93,15 +93,15 @@
 }
 
 .prose h2 {
-  @apply text-terminal-green font-bold mb-4 mt-8 text-2xl;
+  @apply text-primary font-bold mb-4 mt-8 text-2xl;
 }
 
 .prose h3 {
-  @apply text-terminal-green/90 font-bold mb-3 mt-6 text-xl;
+  @apply text-primary/90 font-bold mb-3 mt-6 text-xl;
 }
 
 .prose blockquote {
-  @apply border-l-2 border-terminal-green pl-4 my-4 italic text-muted-foreground bg-muted/50 py-2;
+  @apply border-l-2 border-primary pl-4 my-4 italic text-muted-foreground bg-muted/50 py-2;
 }
 
 .prose ul {
@@ -114,7 +114,7 @@
 
 .prose ul > li::before {
   content: ">";
-  @apply absolute left-0 text-terminal-green;
+  @apply absolute left-0 text-primary;
 }
 
 .prose ol {
@@ -129,7 +129,7 @@
 
 .prose ol > li::before {
   content: counter(item) ">";
-  @apply absolute left-0 text-terminal-green;
+  @apply absolute left-0 text-primary;
 }
 
 .prose li > * {

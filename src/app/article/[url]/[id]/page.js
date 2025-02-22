@@ -2,20 +2,6 @@
 
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import {
-  ArrowLeft,
-  Type,
-  Loader2,
-  Wand2,
-  ExternalLink,
-  Focus,
-  FileText,
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { fetchFullRssText, fetchRssFeed } from "@/lib/rss-utils";
-import React from "react";
 import {
   Sheet,
   SheetContent,
@@ -23,6 +9,19 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { fetchFullRssText, fetchRssFeed } from "@/lib/rss-utils";
+import { defaultPrompt as utilDefaultPrompt } from "@/lib/utils";
+import {
+  ArrowLeft,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Type,
+  Wand2,
+} from "lucide-react";
+import { marked } from "marked";
+import Link from "next/link";
+import React, { useEffect, useRef, useState } from "react";
 
 const fontFamilies = [
   { name: "JetBrains Mono", value: "font-jetbrains" },
@@ -50,27 +49,13 @@ export default function ArticlePage({ params }) {
   const [fontSizeIndex, setFontSizeIndex] = useState(1);
   const [fontFamily, setFontFamily] = useState("font-jetbrains");
   const [fetchingFullText, setFetchingFullText] = useState(false);
-  const [readingProgress, setReadingProgress] = useState(0);
   const [summarizing, setSummarizing] = useState(false);
   const [summary, setSummary] = useState("");
+  const [activeTab, setActiveTab] = useState("original");
   const articleRef = useRef(null);
 
   useEffect(() => {
     loadArticle();
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!articleRef.current) return;
-
-      const element = articleRef.current;
-      const totalHeight = element.scrollHeight - element.clientHeight;
-      const progress = (window.scrollY / totalHeight) * 100;
-      setReadingProgress(Math.min(100, Math.max(0, progress)));
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   async function loadArticle() {
@@ -86,7 +71,7 @@ export default function ArticlePage({ params }) {
   }
 
   const defaultPrompt =
-    localStorage.getItem("defaultPrompt") || "Summarize this article:";
+    localStorage.getItem("defaultPrompt") || utilDefaultPrompt;
   const openRouterKey = localStorage.getItem("openRouterKey");
   const aiModel = localStorage.getItem("aiModel") || "gpt-3.5-turbo";
 
@@ -115,83 +100,86 @@ export default function ArticlePage({ params }) {
               },
               {
                 role: "user",
-                content: `Summarize this article: ${article.title}\n\n${article.content}`,
+                content: `${article.title}\n\n${article.content}`,
               },
             ],
           }),
         }
       );
       const data = await response.json();
-      setSummary(data.choices[0].message.content);
+      const markdownContent = data.choices[0].message.content;
+      const htmlContent = marked(markdownContent);
+      setSummary(htmlContent);
     } catch (err) {
       setError("Failed to generate summary");
     } finally {
       setSummarizing(false);
     }
   }
-
   const formatContent = (content) => {
     return content
       .replace(
         /<h2/g,
-        '<h2 class="text-2xl font-bold mt-12 mb-6 text-[#0ff] font-mono tracking-wider"'
+        `<h2 class="text-2xl font-bold mt-12 mb-6 text-primary ${fontFamily} tracking-wider"`
       )
       .replace(
         /<h3/g,
-        '<h3 class="text-xl font-bold mt-8 mb-4 text-[#0ff]/90 font-mono tracking-wide"'
+        `<h3 class="text-xl font-bold mt-8 mb-4 text-primary/90 ${fontFamily} tracking-wide"`
       )
       .replace(
         /<p>/g,
-        '<p class="leading-relaxed mb-6 text-[#0ff]/70 font-mono">'
+        `<p class="leading-relaxed mb-6 text-primary/70 ${fontFamily}">`
       )
       .replace(
         /<blockquote>/g,
-        '<blockquote class="border-l-4 border-[#0ff] pl-6 italic my-8 text-[#0ff]/60 bg-[#0ff]/5 p-4 rounded">'
+        '<blockquote class="border-l-4 border-primary pl-6 italic my-8 text-primary/60 bg-primary/5 p-4 rounded">'
       )
       .replace(
         /<ul>/g,
-        '<ul class="space-y-3 my-6 border border-[#0ff]/20 rounded-lg p-4 bg-black/50">'
+        '<ul class="space-y-3 my-6 border border-primary/20 rounded-lg p-4 bg-background/50">'
       )
       .replace(
         /<ol>/g,
-        '<ol class="space-y-3 my-6 list-none counter-reset-item border border-[#0ff]/20 rounded-lg p-4 bg-black/50">'
+        '<ol class="space-y-3 my-6 list-none counter-reset-item border border-primary/20 rounded-lg p-4 bg-background/50">'
       )
-      .replace(
-        /<li>/g,
-        `<li class="flex gap-3 items-start group">`
-      )
+      .replace(/<li>/g, `<li class="flex gap-3 items-start group">`)
       .replace(/<\/li>/g, "</span></li>")
       .replace(
         /<img/g,
-        '<img class="rounded-xl shadow-[0_0_15px_rgba(0,255,255,0.3)] my-10 w-full border border-[#0ff]/30" loading="lazy"'
-      )
-      .replace(
-        /<a /g,
-        '<a class="text-[#0ff] hover:text-[#0ff] hover:underline decoration-[#0ff]/30 font-mono" '
+        '<img class="rounded-xl shadow-primary/30 my-10 w-full max-w-full h-auto border border-primary/30" loading="lazy"'
       )
       .replace(
         /<pre/g,
-        '<pre class="bg-black/50 border border-[#0ff]/30 rounded-lg p-4 my-6 overflow-x-auto font-mono text-[#0ff]/70"'
+        `<pre class="bg-background/50 border border-primary/30 rounded-lg p-4 my-6 overflow-x-auto whitespace-pre-wrap break-words ${fontFamily} text-primary/70"`
       )
-      .replace(/<code/g, '<code class="font-mono text-[#0ff]"');
+      .replace(/<code/g, `<code class="${fontFamily} text-primary"`)
+      .replace(
+        /<table/g,
+        `<div class="overflow-x-auto max-w-full my-6 border border-primary/30 rounded-lg bg-background/50"><table class="w-full border-collapse text-primary/70 ${fontFamily}"`
+      )
+      .replace(/<\/table>/g, "</table></div>")
+      .replace(
+        /<th/g,
+        `<th class="p-3 text-left border-b border-primary/30 font-medium text-primary bg-primary/10 ${fontFamily}"`
+      )
+      .replace(
+        /<td/g,
+        `<td class="p-3 border-b border-primary/10 ${fontFamily}"`
+      );
   };
 
   return (
-    <div className="relative min-h-screen bg-black">
+    <div className="relative min-h-screen bg-background">
       <Navigation />
 
-      <div className="fixed top-14 left-0 right-0 z-50">
-        <Progress value={readingProgress} className="h-1 bg-[#0ff]/20" />
-      </div>
-
-      <header className="fixed top-[3.5rem] left-0 right-0 bg-black/80 backdrop-blur-sm border-b border-[#0ff]/30 z-40">
+      <header className="fixed top-[3.5rem] left-0 right-0 bg-background/80 backdrop-blur-sm border-b border-primary/30 z-40">
         <div className="content-container h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Link href={`/feed/${resolvedParams.url}`}>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-[#0ff] hover:text-[#0ff] hover:bg-[#0ff]/10 transition-all duration-300"
+                className="text-primary hover:text-primary hover:bg-primary/10 transition-all duration-300"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -204,20 +192,20 @@ export default function ArticlePage({ params }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-[#0ff] hover:text-[#0ff] hover:bg-[#0ff]/10 transition-all duration-300"
+                  className="text-primary hover:text-primary hover:bg-primary/10 transition-all duration-300"
                 >
                   <Type className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent className="bg-black/95 border-[#0ff]/30 backdrop-blur-sm">
+              <SheetContent className="bg-background/95 border-primary/30 backdrop-blur-sm">
                 <SheetHeader>
-                  <SheetTitle className="text-[#0ff] font-mono tracking-wider">
+                  <SheetTitle className="text-primary font-mono tracking-wider">
                     [Terminal Settings]
                   </SheetTitle>
                 </SheetHeader>
                 <div className="grid gap-6 py-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-[#0ff] font-mono tracking-wide">
+                    <label className="text-sm font-medium text-primary font-mono tracking-wide">
                       Font Style
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -228,7 +216,7 @@ export default function ArticlePage({ params }) {
                             fontFamily === font.value ? "default" : "outline"
                           }
                           onClick={() => setFontFamily(font.value)}
-                          className={`justify-start ${font.value} text-[#0ff] hover:text-[#0ff] hover:bg-[#0ff]/10 border-[#0ff]/30 transition-all duration-300`}
+                          className={`justify-start ${font.value} text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300`}
                         >
                           <span className="truncate">{font.name}</span>
                         </Button>
@@ -237,7 +225,7 @@ export default function ArticlePage({ params }) {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-[#0ff] font-mono tracking-wide">
+                    <label className="text-sm font-medium text-primary font-mono tracking-wide">
                       Font Size
                     </label>
                     <div className="flex gap-2">
@@ -248,7 +236,7 @@ export default function ArticlePage({ params }) {
                             fontSizeIndex === index ? "default" : "outline"
                           }
                           onClick={() => setFontSizeIndex(index)}
-                          className="flex-1 text-[#0ff] hover:text-[#0ff] hover:bg-[#0ff]/10 border-[#0ff]/30 transition-all duration-300 font-mono"
+                          className="flex-1 text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300 font-mono"
                         >
                           {index === 0
                             ? "S"
@@ -268,48 +256,80 @@ export default function ArticlePage({ params }) {
         </div>
       </header>
 
-      <main className="container max-w-3xl px-4 pt-32 pb-16">
+      <main className="container max-w-3xl px-4 sm:px-6 pt-32 pb-16 overflow-x-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-[#0ff]" />
-            <p className="text-[#0ff]/60 font-mono">LOADING ARTICLE...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-primary/60 font-mono">LOADING ARTICLE...</p>
           </div>
         ) : error ? (
           <div className="text-center py-12">
-            <p className="text-red-500 font-mono font-bold animate-pulse">
+            <p className="text-destructive font-mono font-bold animate-pulse">
               [ERROR] {error}
             </p>
           </div>
         ) : (
           <article
             ref={articleRef}
-            className={`${fontSizes[fontSizeIndex]} ${fontFamily} relative`}
+            className={`${fontSizes[fontSizeIndex]} ${fontFamily} relative max-w-full`}
           >
             <div className="mb-12">
-              <h1 className="text-4xl font-bold tracking-tight mb-6 text-[#0ff] font-mono animate-pulse">
+              <h1 className="text-4xl font-bold tracking-tight mb-6 text-primary font-mono animate-pulse">
                 {article.title}
               </h1>
-              <div className="flex items-center gap-4 text-[#0ff]/60 font-mono">
+              <div className="flex items-center gap-4 text-primary/60 font-mono mb-6">
                 <time dateTime={article.pubDate}>
                   {new Date(article.pubDate).toLocaleDateString()}
                 </time>
                 {article.author && (
                   <>
-                    <span className="text-[#0ff]/30">|</span>
+                    <span className="text-primary/30">|</span>
                     <span>{article.author}</span>
                   </>
                 )}
               </div>
+
+              <div className="flex gap-2 mb-8">
+                <Button
+                  variant={
+                    !summary || activeTab === "original" ? "default" : "outline"
+                  }
+                  onClick={() => setActiveTab("original")}
+                  className="flex-1 text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300 font-mono"
+                  disabled={!summary}
+                >
+                  [Original Content]
+                </Button>
+                <Button
+                  variant={
+                    summary && activeTab === "summary" ? "default" : "outline"
+                  }
+                  onClick={() => setActiveTab("summary")}
+                  className="flex-1 text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300 font-mono"
+                  disabled={!summary}
+                >
+                  [Summary]
+                </Button>
+              </div>
             </div>
 
-            <div
-              className="prose prose-invert max-w-none relative"
-              dangerouslySetInnerHTML={{
-                __html: formatContent(article.content),
-              }}
-            />
+            {activeTab === "summary" && summary ? (
+              <div
+                className="prose prose-invert max-w-none relative overflow-x-auto"
+                dangerouslySetInnerHTML={{
+                  __html: formatContent(summary),
+                }}
+              />
+            ) : (
+              <div
+                className="prose prose-invert max-w-none relative overflow-x-auto"
+                dangerouslySetInnerHTML={{
+                  __html: formatContent(article.content),
+                }}
+              />
+            )}
 
-            <div className="mt-12 pt-8 border-t border-[#0ff]/30">
+            <div className="mt-12 pt-8 border-t border-primary/30">
               <Link
                 href={article.link}
                 target="_blank"
@@ -317,7 +337,7 @@ export default function ArticlePage({ params }) {
                 className="block"
               >
                 <Button
-                  className="w-full text-[#0ff] hover:text-[#0ff] hover:bg-[#0ff]/10 border-[#0ff]/30 transition-all duration-300 font-mono tracking-wide group"
+                  className="w-full text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300 font-mono tracking-wide group"
                   variant="outline"
                 >
                   <ExternalLink className="h-4 w-4 mr-2 group-hover:rotate-45 transition-transform" />
@@ -325,22 +345,6 @@ export default function ArticlePage({ params }) {
                 </Button>
               </Link>
             </div>
-
-            {summary && (
-              <div className="mt-8 space-y-8">
-                {summary && (
-                  <div className="p-6 bg-[#0ff]/5 rounded-xl border border-[#0ff]/30 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#0ff]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <h3 className="font-semibold text-lg mb-3 text-[#0ff] font-mono tracking-wider">
-                      [RSS Content Summary]
-                    </h3>
-                    <p className="leading-relaxed text-[#0ff]/60 font-mono">
-                      {summary}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
           </article>
         )}
       </main>
@@ -349,14 +353,13 @@ export default function ArticlePage({ params }) {
         <Button
           onClick={async () => {
             const data = await fetchFullRssText(article.link, openRouterKey);
-
             setArticle({
               ...article,
               content: data.content,
             });
           }}
           disabled={fetchingFullText}
-          className="h-12 w-12 shadow-[0_0_15px_rgba(0,255,255,0.3)] bg-black border border-[#0ff]/30 text-[#0ff] hover:bg-[#0ff]/10 transition-all duration-300 group"
+          className="h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group"
           size="icon"
           title="Fetch and summarize full article"
         >
@@ -369,7 +372,7 @@ export default function ArticlePage({ params }) {
         <Button
           onClick={summarizeArticle}
           disabled={summarizing}
-          className="h-12 w-12 shadow-[0_0_15px_rgba(0,255,255,0.3)] bg-black border border-[#0ff]/30 text-[#0ff] hover:bg-[#0ff]/10 transition-all duration-300 group"
+          className="h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group"
           size="icon"
           title="Summarize RSS content"
         >

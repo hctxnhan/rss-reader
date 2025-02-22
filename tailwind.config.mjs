@@ -23,10 +23,6 @@ const config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        terminal: {
-          green: "hsl(var(--terminal-green))",
-          cursor: "hsl(var(--terminal-cursor))",
-        },
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
