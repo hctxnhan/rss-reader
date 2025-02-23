@@ -24,7 +24,7 @@ export async function fetchVideoTranscript(videoId) {
     return response.data;
   } catch (err) {
     console.error("Video transcript fetch error:", err);
-    throw new Error("Failed to fetch video transcript");
+    throw new Error("Failed to fetch video transcript: " + err.message);
   }
 }
 
