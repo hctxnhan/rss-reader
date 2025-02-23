@@ -12,18 +12,14 @@ export async function fetchRssFeed(url) {
 }
 
 export async function fetchFullRssText(targetUrl, openRouterKey) {
-  if (!openRouterKey) {
-    throw new Error("Please set your OpenRouter API key in settings");
-  }
-
   try {
     const response = await axios.get("/api/rss/fullText", {
       params: {
         url: targetUrl,
         openRouterKey,
-      }
+      },
     });
-    
+
     return response.data;
   } catch (err) {
     console.error("Full text fetch error:", err);

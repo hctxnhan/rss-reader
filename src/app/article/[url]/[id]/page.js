@@ -64,6 +64,8 @@ export default function ArticlePage({ params }) {
   const [chatLoading, setChatLoading] = useState(false);
   const articleRef = useRef(null);
 
+  const [includeArticleContext, setIncludeArticleContext] = useState(false);
+
   useEffect(() => {
     loadArticle();
   }, []);
@@ -169,7 +171,23 @@ export default function ArticlePage({ params }) {
       ...chatMessages,
       { role: "user", content: chatInput },
     ].slice(-5);
-    setChatMessages(newMessages);
+
+    if (includeArticleContext) {
+      newMessages.unshift({
+        role: "system",
+        content: `${article.title}\n\n${article.content}`,
+      });
+    }
+
+    // Display messages in UI without the full article context
+    const displayMessages = newMessages.map((msg) => {
+      if (msg.role === "system" && msg.content.includes(article.content)) {
+        return { ...msg, content: "[Article included as context]" };
+      }
+      return msg;
+    });
+
+    setChatMessages(displayMessages);
     setChatInput("");
 
     try {
@@ -183,13 +201,13 @@ export default function ArticlePage({ params }) {
           },
           body: JSON.stringify({
             model: aiModel,
-            messages: [...newMessages],
+            messages: newMessages, // Send full context including article
           }),
         }
       );
       const data = await response.json();
       setChatMessages([
-        ...newMessages,
+        ...displayMessages,
         { role: "assistant", content: data.choices[0].message.content },
       ]);
     } catch (err) {
@@ -512,6 +530,21 @@ export default function ArticlePage({ params }) {
               )}
             </div>
             <div className="border-t border-primary/30">
+              <div className="p-2 flex items-center gap-2 border-b border-primary/30">
+                <input
+                  type="checkbox"
+                  id="include-context"
+                  checked={includeArticleContext}
+                  onChange={(e) => setIncludeArticleContext(e.target.checked)}
+                  className="rounded border-primary/30 text-primary bg-background focus:ring-primary"
+                />
+                <label
+                  htmlFor="include-context"
+                  className="text-sm text-primary/80 font-mono"
+                >
+                  Include article as context
+                </label>
+              </div>
               <textarea
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}

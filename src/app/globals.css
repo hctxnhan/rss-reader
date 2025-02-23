@@ -8,9 +8,6 @@
     --background: 220 20% 12%; /* Darker background (#21252B approx.) */
     --foreground: 220 15% 78%; /* Lighter foreground (#C8CDD8 approx.) */
 
-    --terminal-green: 100 35% 60%; /* Same as before (#98C379) */
-    --terminal-cursor: 100 35% 70%;
-
     --primary: 207 82% 66%; /* Blue (#61AFEF) */
     --primary-foreground: 220 20% 12%;
 
@@ -34,44 +31,6 @@
 
   body {
     @apply bg-background text-foreground;
-  }
-
-  /* Terminal Window */
-  .terminal-window {
-    @apply border border-terminal-green bg-background/50 backdrop-blur-sm;
-  }
-
-  .terminal-header {
-    @apply border-b border-terminal-green px-4 py-2 flex items-center justify-between;
-  }
-
-  .terminal-content {
-    @apply p-4 space-y-2;
-  }
-
-  /* Terminal Text */
-  .terminal-prompt::before {
-    content: "$ ";
-    @apply text-terminal-green;
-  }
-
-  .terminal-cursor::after {
-    content: "█";
-    @apply text-terminal-cursor animate-blink;
-  }
-
-  /* Terminal Lists */
-  .terminal-list {
-    @apply space-y-1;
-  }
-
-  .terminal-list-item {
-    @apply flex gap-2;
-  }
-
-  .terminal-list-item::before {
-    content: ">";
-    @apply text-terminal-green;
   }
 }
 
