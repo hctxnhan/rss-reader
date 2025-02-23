@@ -444,7 +444,6 @@ export default function ArticlePage({ params }) {
         <Button
           onClick={() => {
             setIsChatOpen(true);
-            setSelectedText(""); // Use full article as context
           }}
           className="h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group"
           size="icon"
