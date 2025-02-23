@@ -17,7 +17,7 @@ export async function GET(request) {
 
     // Format transcript into readable content
     const transcript = await ytTranscript.getTranscript();
-    const content = transcript.content;
+    const content = transcript?.map((t) => t.text).join(" ");
 
     return NextResponse.json({
       content,
