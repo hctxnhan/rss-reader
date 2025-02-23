@@ -25,8 +25,8 @@ export async function GET(request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch video transcript" },
-      { status: 500, details: error.message }
+      { error: "Failed to fetch video transcript", details: error.message },
+      { status: 500 }
     );
   }
 }
