@@ -18,6 +18,7 @@ import {
   Loader2,
   Type,
   Wand2,
+  MessageSquare,
 } from "lucide-react";
 import { marked } from "marked";
 import Link from "next/link";
@@ -57,6 +58,10 @@ export default function ArticlePage({ params }) {
   const [summarizing, setSummarizing] = useState(false);
   const [summary, setSummary] = useState("");
   const [activeTab, setActiveTab] = useState("original");
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const articleRef = useRef(null);
 
   useEffect(() => {
@@ -75,7 +80,6 @@ export default function ArticlePage({ params }) {
 
       const item = data.items[articleId];
 
-      // If it's a YouTube video, fetch the transcript
       if (item.isVideo && item.videoId) {
         const transcriptData = await fetchVideoTranscript(item.videoId);
         item.content = `
@@ -154,6 +158,44 @@ export default function ArticlePage({ params }) {
       setError("Failed to generate summary");
     } finally {
       setSummarizing(false);
+    }
+  }
+
+  async function handleChatSubmit() {
+    if (!openRouterKey || !chatInput) return;
+
+    setChatLoading(true);
+    const newMessages = [
+      ...chatMessages,
+      { role: "user", content: chatInput },
+    ].slice(-5);
+    setChatMessages(newMessages);
+    setChatInput("");
+
+    try {
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openRouterKey}`,
+          },
+          body: JSON.stringify({
+            model: aiModel,
+            messages: [...newMessages],
+          }),
+        }
+      );
+      const data = await response.json();
+      setChatMessages([
+        ...newMessages,
+        { role: "assistant", content: data.choices[0].message.content },
+      ]);
+    } catch (err) {
+      setError("Failed to get chat response");
+    } finally {
+      setChatLoading(false);
     }
   }
 
@@ -400,6 +442,17 @@ export default function ArticlePage({ params }) {
 
       <div className="fixed bottom-6 right-6 flex flex-col gap-4">
         <Button
+          onClick={() => {
+            setIsChatOpen(true);
+            setSelectedText(""); // Use full article as context
+          }}
+          className="h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group"
+          size="icon"
+          title="Chat with full article"
+        >
+          <MessageSquare className="h-6 w-6" />
+        </Button>
+        <Button
           onClick={async () => {
             const data = await fetchFullRssText(article.link, openRouterKey);
             setArticle({
@@ -432,6 +485,54 @@ export default function ArticlePage({ params }) {
           )}
         </Button>
       </div>
+
+      <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
+        <SheetContent className="bg-background/95 border-primary/30 backdrop-blur-sm w-[400px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle className="text-primary font-mono tracking-wider">
+              [AI Chat]
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col h-[calc(100%-4rem)] mt-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {chatMessages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg ${
+                    msg.role === "user"
+                      ? "bg-primary/10 text-primary ml-8"
+                      : "bg-background/50 text-primary/80 mr-8"
+                  }`}
+                  dangerouslySetInnerHTML={{
+                    __html: marked(msg.content),
+                  }}
+                />
+              ))}
+              {chatLoading && (
+                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+              )}
+            </div>
+            <div className="border-t border-primary/30">
+              <textarea
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) =>
+                  e.key === "Enter" && !e.shiftKey && handleChatSubmit()
+                }
+                placeholder="Type your message..."
+                className="w-full h-20 p-2 bg-background border border-primary/30 rounded-lg text-primary resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <Button
+                onClick={() => handleChatSubmit()}
+                disabled={chatLoading || !chatInput}
+                className="mt-2 w-full bg-primary text-white hover:bg-primary/90"
+              >
+                Send
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
