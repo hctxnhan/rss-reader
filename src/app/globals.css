@@ -1,7 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
+
 @layer base {
   :root {
     /* One Dark Pro Theme Colors (Higher Contrast) */
@@ -112,11 +112,6 @@
   @apply flex gap-3 items-start pl-6 relative;
 }
 
-.prose ul > li::before {
-  content: ">";
-  @apply absolute left-0 text-primary;
-}
-
 .prose ol {
   @apply space-y-2 my-4 list-none;
   counter-reset: item;
@@ -125,11 +120,6 @@
 .prose ol > li {
   @apply flex gap-3 items-start pl-6 relative;
   counter-increment: item;
-}
-
-.prose ol > li::before {
-  content: counter(item) ">";
-  @apply absolute left-0 text-primary;
 }
 
 .prose li > * {
