@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { YoutubeTranscript } from "youtube-transcript";
+import { YtTranscript } from "yt-transcript";
 
 export async function GET(request) {
   try {
@@ -13,11 +13,11 @@ export async function GET(request) {
       );
     }
 
-    // Fetch video transcript
-    const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+    const ytTranscript = new YtTranscript({ videoId });
 
     // Format transcript into readable content
-    const content = transcript.map((item) => item.text).join("\n");
+    const transcript = await ytTranscript.getTranscript();
+    const content = transcript.content;
 
     return NextResponse.json({
       content,
