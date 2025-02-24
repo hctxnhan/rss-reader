@@ -12,22 +12,14 @@ import {
 import { fetchFullRssText, fetchRssFeed } from "@/lib/rss-utils";
 import { defaultPrompt as utilDefaultPrompt } from "@/lib/utils";
 import {
-  ArrowLeft,
-  ExternalLink,
-  FileText,
-  Loader2,
-  Type,
-  Wand2,
-  MessageSquare,
-} from "lucide-react";
-import { marked } from "marked";
-import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
-import {
   fetchVideoTranscript,
   fetchYoutubeChannel,
   isYoutubeUrl,
 } from "@/lib/youtube-utils";
+import { ArrowLeft, FileText, Loader2, Type } from "lucide-react";
+import { marked } from "marked";
+import Link from "next/link";
+import React, { useEffect, useState } from "react";
 
 const fontFamilies = [
   { name: "JetBrains Mono", value: "font-jetbrains" },
@@ -43,6 +35,10 @@ const fontFamilies = [
 ];
 
 const fontSizes = ["text-sm", "text-base", "text-lg", "text-xl"];
+
+import { Article } from "@/components/article/article";
+import { ChatModal } from "@/components/article/chat-modal";
+import { SummaryModal } from "@/components/article/summary-modal";
 
 export default function ArticlePage({ params }) {
   const resolvedParams = React.use(params);
@@ -62,9 +58,15 @@ export default function ArticlePage({ params }) {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const articleRef = useRef(null);
-
+  const [showSummarizeDialog, setShowSummarizeDialog] = useState(false);
+  const [selectedPromptId, setSelectedPromptId] = useState(null);
+  const [selectedLength, setSelectedLength] = useState("short");
   const [includeArticleContext, setIncludeArticleContext] = useState(false);
+  const prompts = localStorage.getItem("prompts")
+    ? JSON.parse(localStorage.getItem("prompts"))
+    : [];
+
+  console.log(selectedPromptId, selectedLength);
 
   useEffect(() => {
     loadArticle();
@@ -129,6 +131,8 @@ export default function ArticlePage({ params }) {
 
     try {
       setSummarizing(true);
+      const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);
+      const lengthPrefix = `Generate a ${selectedLength} summary. `;
       const response = await fetch(
         "https://openrouter.ai/api/v1/chat/completions",
         {
@@ -142,7 +146,8 @@ export default function ArticlePage({ params }) {
             messages: [
               {
                 role: "system",
-                content: defaultPrompt,
+                content:
+                  lengthPrefix + (selectedPrompt?.content || defaultPrompt),
               },
               {
                 role: "user",
@@ -156,6 +161,8 @@ export default function ArticlePage({ params }) {
       const markdownContent = data.choices[0].message.content;
       const htmlContent = marked(markdownContent);
       setSummary(htmlContent);
+      setShowSummarizeDialog(false);
+      setActiveTab("summary");
     } catch (err) {
       setError("Failed to generate summary");
     } finally {
@@ -217,65 +224,42 @@ export default function ArticlePage({ params }) {
     }
   }
 
-  const formatContent = (content) => {
-    return content
-      .replaceAll(
-        /<h2/g,
-        `<h2 class="text-2xl font-bold mt-12 mb-6 text-primary ${fontFamily} tracking-wider"`
-      )
-      .replaceAll(
-        /<h3/g,
-        `<h3 class="text-xl font-bold mt-8 mb-4 text-primary/90 ${fontFamily} tracking-wide"`
-      )
-      .replaceAll(
-        /<p>/g,
-        `<p class="leading-relaxed mb-6 text-primary/70 ${fontFamily}">`
-      )
-      .replaceAll(
-        /<blockquote>/g,
-        '<blockquote class="border-l-4 border-primary pl-6 italic my-8 text-primary/60 bg-primary/5 p-4 rounded">'
-      )
-      .replaceAll(
-        /<ul>/g,
-        '<ul class="space-y-3 my-6 border border-primary/20 rounded-lg p-4 bg-background/50 list-disc pl-6">'
-      )
-      .replaceAll(
-        /<ol>/g,
-        '<ol class="space-y-3 my-6 list-decimal counter-reset-item border border-primary/20 rounded-lg p-4 bg-background/50 pl-6">'
-      )
-      .replaceAll(
-        /<li>/g,
-        `<li class="flex gap-3 items-start group"><span class="w-2 h-2 rounded-full bg-primary/70 mt-2"></span><span class="flex-1">`
-      )
-      .replaceAll(/<\/li>/g, "</span></li>")
-      .replaceAll(
-        /<img/g,
-        '<img class="rounded-xl shadow-primary/30 my-10 w-full max-w-full h-auto border border-primary/30 object-cover" loading="lazy"'
-      )
-      .replaceAll(
-        /<pre/g,
-        `<pre class="bg-background/50 border border-primary/30 rounded-lg p-4 my-6 overflow-x-auto whitespace-pre-wrap break-words text-sm ${fontFamily} text-primary/70"`
-      )
-      .replaceAll(
-        /<code/g,
-        `<code class="px-1 py-0.5 bg-primary/10 rounded text-sm font-mono text-primary/80"`
-      )
-      .replaceAll(
-        /<table/g,
-        `<div class="overflow-x-auto max-w-full my-6 border border-primary/30 rounded-lg bg-background/50"><table class="w-full border-collapse text-primary/70 ${fontFamily} table-auto"`
-      )
-      .replaceAll(/<\/table>/g, "</table></div>")
-      .replaceAll(
-        /<th/g,
-        `<th class="p-3 text-left border-b border-primary/30 font-medium text-primary bg-primary/10 ${fontFamily}"`
-      )
-      .replaceAll(
-        /<td/g,
-        `<td class="p-3 border-b border-primary/10 text-primary/80 ${fontFamily}"`
-      )
-      .replaceAll(/<a /g, `<a class="text-primary hover:underline font-medium"`)
-      .replaceAll(/<hr>/g, `<hr class="my-6 border-primary/20">`);
-  };
+  useEffect(() => {
+    // Add global handler for article links
+    window.handleArticleLink = async (event) => {
+      event.preventDefault();
+      const link = event.target.closest("a");
+      if (!link) return;
+
+      const href = link.getAttribute("data-href");
+      if (!href) return;
+
+      try {
+        setLoading(true);
+        const data = await fetchFullRssText(href, openRouterKey);
+        setArticle({
+          title: data.title || "External Article",
+          content: data.content,
+          link: href,
+          pubDate: new Date().toISOString(),
+        });
+        window.history.pushState(
+          {},
+          "",
+          `/article/${encodeURIComponent(href)}/0`
+        );
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load external article");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return () => {
+      delete window.handleArticleLink;
+    };
+  }, [openRouterKey]);
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -378,193 +362,66 @@ export default function ArticlePage({ params }) {
             </p>
           </div>
         ) : (
-          <article
-            ref={articleRef}
-            className={`${fontSizes[fontSizeIndex]} ${fontFamily} relative max-w-full`}
-          >
-            <div className="mb-12">
-              <h1 className="text-4xl font-bold tracking-tight mb-6 text-primary font-mono animate-pulse">
-                {article.title}
-              </h1>
-              <div className="flex items-center gap-4 text-primary/60 font-mono mb-6">
-                <time dateTime={article.pubDate}>
-                  {new Date(article.pubDate).toLocaleDateString()}
-                </time>
-                {article.author && (
-                  <>
-                    <span className="text-primary/30">|</span>
-                    <span>{article.author}</span>
-                  </>
-                )}
-              </div>
-
-              <div className="flex gap-2 mb-8">
-                <Button
-                  variant={
-                    !summary || activeTab === "original" ? "default" : "outline"
-                  }
-                  onClick={() => setActiveTab("original")}
-                  className="flex-1 text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300 font-mono"
-                  disabled={!summary}
-                >
-                  [Original Content]
-                </Button>
-                <Button
-                  variant={
-                    summary && activeTab === "summary" ? "default" : "outline"
-                  }
-                  onClick={() => setActiveTab("summary")}
-                  className="flex-1 text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300 font-mono"
-                  disabled={!summary}
-                >
-                  [Summary]
-                </Button>
-              </div>
-            </div>
-
-            {activeTab === "summary" && summary ? (
-              <div
-                className="prose prose-invert max-w-none relative overflow-x-auto"
-                dangerouslySetInnerHTML={{
-                  __html: formatContent(summary),
-                }}
-              />
-            ) : (
-              <div
-                className="prose prose-invert max-w-none relative overflow-x-auto"
-                dangerouslySetInnerHTML={{
-                  __html: formatContent(article.content),
-                }}
-              />
-            )}
-
-            <div className="mt-12 pt-8 border-t border-primary/30">
-              <Link
-                href={article.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-              >
-                <Button
-                  className="w-full text-primary hover:text-primary hover:bg-primary/10 border-primary/30 transition-all duration-300 font-mono tracking-wide group"
-                  variant="outline"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2 group-hover:rotate-45 transition-transform" />
-                  [Open Original Article]
-                </Button>
-              </Link>
-            </div>
-          </article>
+          <Article
+            article={article}
+            fontFamily={fontFamily}
+            fontSizes={fontSizes}
+            fontSizeIndex={fontSizeIndex}
+            summary={summary}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            setArticle={setArticle}
+            setShowSummarizeDialog={setShowSummarizeDialog}
+            openRouterKey={openRouterKey}
+            setError={setError}
+            fetchFullRssText={fetchFullRssText}
+          />
         )}
       </main>
 
-      <div className="fixed bottom-6 right-6 flex flex-col gap-4">
-        <Button
-          onClick={() => {
-            setIsChatOpen(true);
-          }}
-          className="h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group"
-          size="icon"
-          title="Chat with full article"
-        >
-          <MessageSquare className="h-6 w-6" />
-        </Button>
-        <Button
-          onClick={async () => {
-            const data = await fetchFullRssText(article.link, openRouterKey);
-            setArticle({
-              ...article,
-              content: data.content,
-            });
-          }}
-          disabled={fetchingFullText}
-          className="h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group"
-          size="icon"
-          title="Fetch and summarize full article"
-        >
-          {fetchingFullText ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
-            <FileText className="h-6 w-6" />
-          )}
-        </Button>
-        <Button
-          onClick={summarizeArticle}
-          disabled={summarizing}
-          className="h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group"
-          size="icon"
-          title="Summarize RSS content"
-        >
-          {summarizing ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
-            <Wand2 className="h-6 w-6" />
-          )}
-        </Button>
-      </div>
+      <SummaryModal
+        showSummarizeDialog={showSummarizeDialog}
+        setShowSummarizeDialog={setShowSummarizeDialog}
+        selectedPromptId={selectedPromptId}
+        setSelectedPromptId={setSelectedPromptId}
+        selectedLength={selectedLength}
+        setSelectedLength={setSelectedLength}
+        prompts={prompts}
+        summarizing={summarizing}
+        summarizeArticle={summarizeArticle}
+      />
 
-      <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
-        <SheetContent className="bg-background/95 border-primary/30 backdrop-blur-sm w-[400px] sm:w-[540px]">
-          <SheetHeader>
-            <SheetTitle className="text-primary font-mono tracking-wider">
-              [AI Chat]
-            </SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col h-[calc(100%-4rem)] mt-4">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {chatMessages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${
-                    msg.role === "user"
-                      ? "bg-primary/10 text-primary ml-8"
-                      : "bg-background/50 text-primary/80 mr-8"
-                  }`}
-                  dangerouslySetInnerHTML={{
-                    __html: marked(msg.content),
-                  }}
-                />
-              ))}
-              {chatLoading && (
-                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
-              )}
-            </div>
-            <div className="border-t border-primary/30">
-              <div className="p-2 flex items-center gap-2 border-b border-primary/30">
-                <input
-                  type="checkbox"
-                  id="include-context"
-                  checked={includeArticleContext}
-                  onChange={(e) => setIncludeArticleContext(e.target.checked)}
-                  className="rounded border-primary/30 text-primary bg-background focus:ring-primary"
-                />
-                <label
-                  htmlFor="include-context"
-                  className="text-sm text-primary/80 font-mono"
-                >
-                  Include article as context
-                </label>
-              </div>
-              <textarea
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) =>
-                  e.key === "Enter" && !e.shiftKey && handleChatSubmit()
-                }
-                placeholder="Type your message..."
-                className="w-full h-20 p-2 bg-background border border-primary/30 rounded-lg text-primary resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-              <Button
-                onClick={() => handleChatSubmit()}
-                disabled={chatLoading || !chatInput}
-                className="mt-2 w-full bg-primary text-white hover:bg-primary/90"
-              >
-                Send
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <ChatModal
+        isChatOpen={isChatOpen}
+        setIsChatOpen={setIsChatOpen}
+        chatMessages={chatMessages}
+        chatInput={chatInput}
+        setChatInput={setChatInput}
+        chatLoading={chatLoading}
+        handleChatSubmit={handleChatSubmit}
+        includeArticleContext={includeArticleContext}
+        setIncludeArticleContext={setIncludeArticleContext}
+      />
+
+      <Button
+        onClick={async () => {
+          const data = await fetchFullRssText(article.link, openRouterKey);
+          setArticle({
+            ...article,
+            content: data.content,
+          });
+        }}
+        disabled={fetchingFullText}
+        className="fixed bottom-24 right-6 h-12 w-12 shadow-primary/30 bg-background border border-primary/30 text-primary hover:bg-primary/10 transition-all duration-300 group z-50"
+        size="icon"
+        title="Fetch and summarize full article"
+      >
+        {fetchingFullText ? (
+          <Loader2 className="h-6 w-6 animate-spin" />
+        ) : (
+          <FileText className="h-6 w-6" />
+        )}
+      </Button>
     </div>
   );
 }

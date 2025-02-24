@@ -14,7 +14,10 @@ export default function Settings() {
   const [newFeedUrl, setNewFeedUrl] = useState("");
   const [openRouterKey, setOpenRouterKey] = useState("");
   const [aiModel, setAiModel] = useState("gpt-3.5-turbo");
-  const [defaultPrompt, setDefaultPrompt] = useState(utilDefaultPrompt);
+  const [prompts, setPrompts] = useState([]);
+  const [selectedPromptId, setSelectedPromptId] = useState(null);
+  const [newPromptName, setNewPromptName] = useState("");
+  const [newPromptContent, setNewPromptContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("rss");
   const [models, setModels] = useState([]);
@@ -25,8 +28,8 @@ export default function Settings() {
     const savedFeeds = localStorage.getItem("rssFeeds");
     const savedKey = localStorage.getItem("openRouterKey");
     const savedModel = localStorage.getItem("aiModel");
-    const savedPrompt =
-      localStorage.getItem("defaultPrompt") || utilDefaultPrompt;
+    const savedPrompts = localStorage.getItem("prompts");
+    const savedSelectedPromptId = localStorage.getItem("selectedPromptId");
 
     if (savedFeeds) setFeeds(JSON.parse(savedFeeds));
     if (savedKey) {
@@ -34,7 +37,26 @@ export default function Settings() {
       fetchModels(savedKey);
     }
     if (savedModel) setAiModel(savedModel);
-    if (savedPrompt) setDefaultPrompt(savedPrompt);
+    if (savedPrompts) {
+      const parsedPrompts = JSON.parse(savedPrompts);
+      setPrompts(parsedPrompts);
+      if (savedSelectedPromptId) {
+        setSelectedPromptId(savedSelectedPromptId);
+      } else if (parsedPrompts.length > 0) {
+        setSelectedPromptId(parsedPrompts[0].id);
+      }
+    } else {
+      // Initialize with default prompt
+      const defaultPromptObj = {
+        id: "default",
+        name: "Default Prompt",
+        content: utilDefaultPrompt,
+      };
+      setPrompts([defaultPromptObj]);
+      setSelectedPromptId("default");
+      localStorage.setItem("prompts", JSON.stringify([defaultPromptObj]));
+      localStorage.setItem("selectedPromptId", "default");
+    }
   }, []);
 
   const fetchModels = async (key) => {
@@ -202,34 +224,112 @@ export default function Settings() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <Label className="text-primary/80 font-mono">
-                      Default Prompt
-                    </Label>
+                    <Label className="text-primary/80 font-mono">Prompts</Label>
                     <Button
                       variant="ghost"
                       onClick={() => {
-                        setDefaultPrompt(utilDefaultPrompt);
+                        const newPrompt = {
+                          id: Date.now().toString(),
+                          name: newPromptName || "New Prompt",
+                          content: newPromptContent || utilDefaultPrompt,
+                        };
+                        const updatedPrompts = [...prompts, newPrompt];
+                        setPrompts(updatedPrompts);
+                        setSelectedPromptId(newPrompt.id);
                         localStorage.setItem(
-                          "defaultPrompt",
-                          utilDefaultPrompt
+                          "prompts",
+                          JSON.stringify(updatedPrompts)
                         );
+                        localStorage.setItem("selectedPromptId", newPrompt.id);
+                        setNewPromptName("");
+                        setNewPromptContent("");
                       }}
                       className="text-primary/60 hover:text-primary hover:bg-primary/10 font-mono text-sm"
                     >
-                      Reset
+                      Add New
                     </Button>
                   </div>
-                  <textarea
-                    value={defaultPrompt}
-                    onChange={(e) => {
-                      setDefaultPrompt(e.target.value);
-                      localStorage.setItem("defaultPrompt", e.target.value);
-                    }}
-                    placeholder="Enter your default prompt template..."
-                    className="w-full h-32 p-3 rounded-lg border border-primary/30 bg-background/50 text-primary font-mono focus:border-primary transition-colors placeholder:text-primary/30 resize-none"
-                  />
+
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Prompt name"
+                        value={newPromptName}
+                        onChange={(e) => setNewPromptName(e.target.value)}
+                        className="border-primary/30 bg-background/50 text-primary font-mono placeholder:text-primary/30 focus:border-primary transition-colors"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      {prompts.map((prompt) => (
+                        <div
+                          key={prompt.id}
+                          className={`p-3 rounded-lg border ${
+                            selectedPromptId === prompt.id
+                              ? "border-primary"
+                              : "border-primary/30"
+                          } bg-background/50 hover:border-primary transition-colors cursor-pointer`}
+                          onClick={() => {
+                            setSelectedPromptId(prompt.id);
+                            localStorage.setItem("selectedPromptId", prompt.id);
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-primary font-mono">
+                              {prompt.name}
+                            </span>
+                            {prompt.id !== "default" && (
+                              <Button
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updatedPrompts = prompts.filter(
+                                    (p) => p.id !== prompt.id
+                                  );
+                                  setPrompts(updatedPrompts);
+                                  if (selectedPromptId === prompt.id) {
+                                    const newSelectedId =
+                                      updatedPrompts[0]?.id || null;
+                                    setSelectedPromptId(newSelectedId);
+                                    localStorage.setItem(
+                                      "selectedPromptId",
+                                      newSelectedId
+                                    );
+                                  }
+                                  localStorage.setItem(
+                                    "prompts",
+                                    JSON.stringify(updatedPrompts)
+                                  );
+                                }}
+                                className="text-primary/60 hover:text-primary hover:bg-primary/10 font-mono"
+                              >
+                                rm
+                              </Button>
+                            )}
+                          </div>
+                          <textarea
+                            value={prompt.content}
+                            onChange={(e) => {
+                              const updatedPrompts = prompts.map((p) =>
+                                p.id === prompt.id
+                                  ? { ...p, content: e.target.value }
+                                  : p
+                              );
+                              setPrompts(updatedPrompts);
+                              localStorage.setItem(
+                                "prompts",
+                                JSON.stringify(updatedPrompts)
+                              );
+                            }}
+                            placeholder="Enter your prompt template..."
+                            className="w-full h-32 p-3 rounded-lg border border-primary/30 bg-background/50 text-primary font-mono focus:border-primary transition-colors placeholder:text-primary/30 resize-none"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
