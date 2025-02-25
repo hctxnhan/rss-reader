@@ -403,7 +403,7 @@ export default function ArticlePage({ params }) {
 
       <Button
         onClick={async () => {
-          const data = await fetchFullRssText(article.link, openRouterKey);
+          const data = await fetchFullRssText(article.link);
           setArticle({
             ...article,
             content: data.content,

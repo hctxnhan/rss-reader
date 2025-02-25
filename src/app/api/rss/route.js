@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import axios from "axios";
+import Parser from "rss-parser";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -10,16 +10,11 @@ export async function GET(request) {
   }
 
   try {
-    const RSS2JSON = "https://api.rss2json.com/v1/api.json";
-    const response = await axios.get(RSS2JSON, {
-      params: {
-        rss_url: rssUrl,
-      },
-    });
-
-    return NextResponse.json(response.data);
+    const parser = new Parser();
+    const response = await parser.parseURL(rssUrl);
+    return NextResponse.json(response);
   } catch (error) {
-    console.error("RSS feed fetch error:", error.response);
+    console.error("RSS feed fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch RSS feed" },
       { status: 500 }
