@@ -66,8 +66,6 @@ export default function ArticlePage({ params }) {
     ? JSON.parse(localStorage.getItem("prompts"))
     : [];
 
-  console.log(selectedPromptId, selectedLength);
-
   useEffect(() => {
     loadArticle();
   }, []);

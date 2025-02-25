@@ -1,5 +1,4 @@
 import axios from "axios";
-import { Readability } from "@mozilla/readability";
 
 export async function fetchRssFeed(url) {
   console.log("test");
@@ -11,12 +10,11 @@ export async function fetchRssFeed(url) {
   return response.data;
 }
 
-export async function fetchFullRssText(targetUrl, openRouterKey) {
+export async function fetchFullRssText(targetUrl) {
   try {
     const response = await axios.get("/api/rss/fullText", {
       params: {
         url: targetUrl,
-        openRouterKey,
       },
     });
 
