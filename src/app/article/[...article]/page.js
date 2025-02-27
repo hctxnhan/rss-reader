@@ -283,7 +283,7 @@ export default function ArticlePage({ params }) {
       <header className="fixed top-[3.5rem] left-0 right-0 bg-background/80 backdrop-blur-sm border-b border-primary/30 z-40">
         <div className="content-container h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Link href={`/feed/${resolvedParams.url}`}>
+            <Link href={`/feed/${resolvedParams.article?.[0]}`}>
               <Button
                 variant="ghost"
                 size="icon"
