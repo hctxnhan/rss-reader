@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Parser from "rss-parser";
 
+export const revalidate = 0; // Disable caching by setting revalidate to 0
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const rssUrl = searchParams.get("url");

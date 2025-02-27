@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 
+export const revalidate = 0; // Disable caching by setting revalidate to 0
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const targetUrl = searchParams.get("url");

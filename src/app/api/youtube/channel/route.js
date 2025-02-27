@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import Parser from "rss-parser";
 import { channelId as getChannelId } from "@gonetone/get-youtube-id-by-url";
 
+export const revalidate = 0; // Disable caching by setting revalidate to 0
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -46,7 +48,7 @@ export async function GET(request) {
       url: channelUrl,
       title: feed.title,
       items,
-      description: channelId
+      description: channelId,
     });
   } catch (error) {
     console.error("YouTube channel fetch error:", error);
