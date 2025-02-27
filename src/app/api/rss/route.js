@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import Parser from "rss-parser";
 
 export const revalidate = 0; // Disable caching by setting revalidate to 0
 
@@ -12,9 +11,18 @@ export async function GET(request) {
   }
 
   try {
-    const parser = new Parser();
-    const response = await parser.parseURL(rssUrl);
-    return NextResponse.json(response);
+    const response = await fetch(
+      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(
+        rssUrl
+      )}`
+    );
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to fetch RSS feed");
+    }
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("RSS feed fetch error:", error);
     return NextResponse.json(

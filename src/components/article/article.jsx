@@ -21,6 +21,7 @@ export function Article({
   const articleRef = useRef(null);
 
   const formatContent = (content) => {
+    if (!content) return "";
     const modifiedContent = content
       .replaceAll(
         /<h2/g,

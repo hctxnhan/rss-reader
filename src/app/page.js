@@ -7,18 +7,29 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { LoadingState } from "@/components/feed/loading-state";
+import { EmptyState } from "@/components/feed/empty-state";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { LoadingState } from "@/components/feed/loading-state";
-import { EmptyState } from "@/components/feed/empty-state";
 import { FeedCard } from "@/components/feed/feed-card";
 
 export default function Home() {
   const [feeds, setFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [url, setUrl] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     const fetchDefaultFeeds = async () => {
@@ -66,6 +77,13 @@ export default function Home() {
     acc[topic].push(feed);
     return acc;
   }, {});
+
+  const handleUrlSubmit = (e) => {
+    e.preventDefault();
+    if (url) {
+      router.push(`/article/${encodeURIComponent(url)}`);
+    }
+  };
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -122,6 +140,34 @@ export default function Home() {
           </ScrollArea>
         )}
       </main>
+
+      {/* Floating button and modal */}
+      <button
+        onClick={() => setShowModal(true)}
+        className="fixed bottom-6 right-6 p-4 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-shadow duration-300"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Article URL</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUrlSubmit} className="space-y-4">
+            <Input
+              placeholder="https://..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              type="url"
+              required
+            />
+            <Button type="submit" className="w-full">
+              Go to Article
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

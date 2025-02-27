@@ -1,7 +1,6 @@
 import axios from "axios";
 
 export async function fetchRssFeed(url) {
-  console.log("test");
   const response = await axios.get("/api/rss", {
     params: {
       url: url,

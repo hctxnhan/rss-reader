@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    /* One Dark Pro Theme Colors (Higher Contrast) */
-    --background: 220 20% 12%; /* Darker background (#21252B approx.) */
-    --foreground: 220 15% 78%; /* Lighter foreground (#C8CDD8 approx.) */
+    /* Dracula Theme Colors (Optimized for Readability) */
+    --background: 231 20% 12%; /* Darker background (#1E1F29) */
+    --foreground: 231 25% 92%; /* Slightly off-white text (#ECECEC) */
 
-    --primary: 207 82% 66%; /* Blue (#61AFEF) */
-    --primary-foreground: 220 20% 12%;
+    --primary: 267 89% 72%; /* Purple (#BD93F9) */
+    --primary-foreground: 231 20% 12%;
 
-    --secondary: 286 60% 67%; /* Purple (#C678DD) */
-    --secondary-foreground: 220 15% 78%;
+    --secondary: 189 85% 65%; /* Cyan (#8BE9FD) */
+    --secondary-foreground: 231 25% 92%;
 
-    --muted: 210 20% 24%; /* Darker muted tone */
-    --muted-foreground: 220 10% 60%; /* Slightly lighter muted text */
+    --muted: 231 20% 22%; /* Muted Darker (#303241) */
+    --muted-foreground: 231 20% 72%; /* Slightly lighter muted text (#B0B0D0) */
 
-    --accent: 6 85% 67%; /* Red (#E06C75) */
-    --accent-foreground: 220 20% 12%;
+    --accent: 356 79% 67%; /* Red (#FF5555) */
+    --accent-foreground: 231 20% 12%;
 
-    --border: 220 15% 28%;
-    --input: 220 15% 22%;
-    --ring: 207 82% 66%;
+    --border: 231 20% 26%;
+    --input: 231 20% 20%;
+    --ring: 267 89% 72%;
   }
 
   * {
@@ -38,6 +38,7 @@
 .content-container {
   @apply w-full max-w-[720px] mx-auto px-0 md:px-4;
 }
+
 /* Article Typography */
 .prose {
   @apply max-w-none;
@@ -56,11 +57,11 @@
 }
 
 .prose h3 {
-  @apply text-primary/90 font-bold mb-3 mt-6 text-xl;
+  @apply text-secondary font-bold mb-3 mt-6 text-xl;
 }
 
 .prose blockquote {
-  @apply border-l-2 border-primary pl-4 my-4 italic text-muted-foreground bg-muted/50 py-2;
+  @apply border-l-4 border-primary pl-4 my-4 italic text-muted-foreground bg-muted/50 py-3;
 }
 
 .prose ul {
@@ -86,9 +87,9 @@
 }
 
 .prose pre {
-  @apply bg-muted p-4 my-4 overflow-x-auto;
+  @apply bg-muted p-4 my-4 overflow-x-auto rounded-md;
 }
 
 .prose code {
-  @apply font-mono text-sm bg-muted px-1.5 py-0.5;
+  @apply font-mono text-sm bg-muted px-2 py-1 rounded-md text-accent;
 }

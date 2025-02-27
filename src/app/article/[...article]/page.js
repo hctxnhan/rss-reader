@@ -42,8 +42,8 @@ import { SummaryModal } from "@/components/article/summary-modal";
 
 export default function ArticlePage({ params }) {
   const resolvedParams = React.use(params);
-  const decodedUrl = decodeURIComponent(resolvedParams.url);
-  const articleId = parseInt(resolvedParams.id);
+  const decodedUrl = decodeURIComponent(resolvedParams.article?.[0]);
+  const articleId = parseInt(resolvedParams.article?.[1]);
 
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -73,34 +73,51 @@ export default function ArticlePage({ params }) {
   async function loadArticle() {
     try {
       setLoading(true);
-      let data;
-      if (!isYoutubeUrl(decodedUrl)) {
-        data = await fetchRssFeed(decodedUrl);
+
+      console.log(!isNaN(articleId), articleId);
+
+      // Check if this is a direct URL input (not from RSS feed)
+      // Direct URLs will have NaN articleId since they don't have a numeric index
+      if (isNaN(articleId)) {
+        // This is a direct URL input, fetch the full text directly
+        const data = await fetchFullRssText(decodedUrl);
+        setArticle({
+          title: data.title || "External Article",
+          content: data.content,
+          link: decodedUrl,
+          pubDate: new Date().toISOString(),
+        });
       } else {
-        data = await fetchYoutubeChannel(decodedUrl);
+        // This is from an RSS feed, use the regular flow
+        let data;
+        if (!isYoutubeUrl(decodedUrl)) {
+          data = await fetchRssFeed(decodedUrl);
+        } else {
+          data = await fetchYoutubeChannel(decodedUrl);
+        }
+
+        const item = data.items[articleId];
+
+        if (item.isVideo && item.videoId) {
+          const transcriptData = await fetchVideoTranscript(item.videoId);
+          item.content = `
+            <div class="w-full h-[400px]">
+              <iframe
+                src="https://www.youtube.com/embed/${item.videoId}"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                class="rounded-lg shadow-lg w-full h-full"
+              ></iframe>
+            </div>
+            <div class="transcript">
+              ${transcriptData.content}
+            </div>
+          `;
+        }
+
+        setArticle(item);
       }
-
-      const item = data.items[articleId];
-
-      if (item.isVideo && item.videoId) {
-        const transcriptData = await fetchVideoTranscript(item.videoId);
-        item.content = `
-          <div class="w-full h-[400px]">
-            <iframe
-              src="https://www.youtube.com/embed/${item.videoId}"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen
-              class="rounded-lg shadow-lg w-full h-full"
-            ></iframe>
-          </div>
-          <div class="transcript">
-            ${transcriptData.content}
-          </div>
-        `;
-      }
-
-      setArticle(item);
     } catch (err) {
       console.log(err);
       setError("Failed to load article");
